@@ -7,43 +7,47 @@ use Illuminate\Http\Request;
 
 class ProgressReportController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function index(Request $request)
     {
-        //
+        $q = ProgressReport::with(['child','author']);
+        if ($cid = $request->query('child_id')) $q->where('child_id', $cid);
+        return response()->json($q->orderBy('report_date','desc')->paginate(15));
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     */
     public function show(ProgressReport $progressReport)
     {
-        //
+        return response()->json($progressReport->load(['child','author']));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
+    public function store(Request $request)
+    {
+        $data = $request->validate([
+            'child_id'        => ['required','exists:children,id'],
+            'created_by'      => ['required','exists:staff,id'],
+            'report_date'     => ['required','date'],
+            'summary'         => ['nullable','string'],
+            'milestone_scores'=> ['nullable','array'],
+        ]);
+
+        $pr = ProgressReport::create($data);
+        return response()->json($pr->load(['child','author']), 201);
+    }
+
     public function update(Request $request, ProgressReport $progressReport)
     {
-        //
+        $data = $request->validate([
+            'report_date'     => ['sometimes','date'],
+            'summary'         => ['nullable','string'],
+            'milestone_scores'=> ['nullable','array'],
+        ]);
+
+        $progressReport->update($data);
+        return response()->json($progressReport->load(['child','author']));
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(ProgressReport $progressReport)
     {
-        //
+        $progressReport->delete();
+        return response()->noContent();
     }
 }
